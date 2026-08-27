@@ -4,73 +4,76 @@ Put this in the experiment script's module docstring, written **before** the run
 with the code, so the pre-registration cannot drift.
 
 ```python
-r"""R<N> -- <one-line question this experiment answers>
+r"""E<N> -- <one-line question this experiment answers>
 
 WHY THIS EXISTS
-<What earlier result raises this question? Why is it the right next step rather than a
-convenient one? Name the specific finding that motivates it.>
+<Which earlier result raises this question? Why is this the right next step rather than a
+convenient one? Name the specific finding that motivates it. If this is the cheapest
+experiment that could falsify the current claim, say so.>
 
 HYPOTHESIS AND MECHANISM
-<What we expect, and the physical/mathematical reason. Not "it might help" -- the
-mechanism that would make it help.>
+<What we expect, and the mechanism -- in terms of data / model / objective / optimizer /
+evaluation. Not "it might help": the reason it would help. State what the mechanism
+FORBIDS, since that is what makes it testable.>
 
-WHY THIS DESIGN CAN DISTINGUISH EXPLANATIONS
-<What competing explanation does this rule out? Which control does that work?>
+COMPETING EXPLANATIONS THIS MUST RULE OUT
+  A  <nuisance parameter: which one, and how the design excludes it>
+  B  <data artifact / leakage / shortcut>
+  C  <variance: what the measured variance floor is>
+  D  <evaluation protocol / tuning budget>
+<For each, what result would be impossible if that explanation were the true one?>
 
-PRE-REGISTERED PREDICTION (signed before running)
+PRE-REGISTERED PREDICTION (signed, before running)
   P1  <directional, ideally with rough magnitude>
-  P2  <secondary prediction, if any>
+  P2  <secondary prediction -- ideally about a shape, ordering, or interaction, which is
+       harder to satisfy by accident than a single number>
 
 FALSIFICATION
-<The result that makes us abandon or narrow this. Be specific and quantitative.>
+<The result that makes us abandon or narrow this. Specific and quantitative. Note whether
+the design has the power to detect the predicted effect at all.>
 
 DECISION RULE
-<What we do for each outcome, fixed now:
+<Fixed now, for each outcome:
    if P1 holds  -> ...
-   if P1 fails  -> ...>
+   if P1 fails  -> ...            (name why this outcome is also reportable)
+   if ambiguous -> ...>
 
-PROTOCOL NOTES
-<Controls used; what is tuned and what is deliberately not; how significance is
-computed; any deviation from the standard setup and why.>
+PROTOCOL
+<Scientific variable; nuisance parameters re-optimised per arm; parameters fixed and the
+scope limit that implies; controls used and which alternative each eliminates; seeds and
+what uncertainty is computed over; baselines and their tuning budget; metric implementation;
+any deviation from the standard setup and why.>
+
+PROVENANCE
+<Data version; code commit; output path namespaced by every varying condition; where raw
+outputs and logs are written.>
 """
 ```
 
-## Worked example
+## Why each part is load-bearing
 
-```python
-r"""R29 -- does the augmentation metadata see what the model's response cannot?
+- **Written before the run**, so it cannot be reshaped by the result.
+- **The mechanism must forbid something** — otherwise the experiment cannot discriminate.
+- **The competing explanations are listed explicitly**, so "my method works" cannot be the
+  only conclusion the design supports.
+- **The prediction is signed**, so it can be wrong.
+- **The decision rule names the negative outcome as reportable**, which removes the incentive
+  to see the result one way and makes a later pivot a scientific decision rather than a
+  rationalisation.
+- **The protocol records what was re-optimised per arm** — the single most common omission,
+  and the one that separates an attribution from a story.
 
-WHY THIS EXISTS
-R22 bounds statistics of the class posterior; R27 extends that to the view features. Both
-are functions of the MODEL'S RESPONSE. The augmentation parameters are a third source that
-no method in this family uses and our bound does not cover: we GENERATE the crop box, so it
-is known exactly, is label-free, and is not a function of the model at all.
+## After the run
 
-HYPOTHESIS AND MECHANISM
-Views are crops down to 8% of image area, which frequently contain no object. Prior work
-measured that augmentation un-calibrates the model almost purely through OVERCONFIDENCE, so
-such a crop is often CONFIDENTLY WRONG -- an entropy selector KEEPS it. Crop area knows the
-view saw 8% of the image regardless of confidence. The two signals should be complementary.
+Append, in the same file:
 
-PRE-REGISTERED
-  P1  crop area has controlled AUC > 0.5 on reducible errors, where entropy is ~0.50
-  P2  |Spearman(area, -entropy)| < 0.3 -- new information, not re-encoded confidence
-
-FALSIFICATION
-P1 fails if AUC is within noise of 0.50. That outcome is a STRONGER negative result and is
-reported as such.
-
-DECISION RULE
-If P1 holds -> pivot to P3 (does it convert to accuracy?) and replicate across backbones.
-If P1 fails -> report the stronger impossibility and move compute to the MEMO measurement.
-
-PROTOCOL NOTES
-Split-half control as in R28: half A alone defines the subset, statistics measured on the
-disjoint half B. View 0 excluded -- it is not a random crop and its box is degenerate.
-"""
+```
+OUTCOME       what happened, with the artifact path
+VERDICT       P1 held / failed / underpowered-inconclusive
+DIAGNOSIS     if it failed or surprised: which of A-D, or a real finding, and how you know
+DECISION      what the pre-registered rule dictated, and what was done
+DEVIATIONS    anything done differently from the protocol above, and why
 ```
 
-Note what this header did in practice: because the decision rule was fixed in advance, the
-later pivot was a scientific decision rather than a rationalisation — and because the
-falsification clause named the alternative outcome as *also* publishable, there was no
-incentive to see the result one way.
+Never edit the pre-registration to match the outcome. If it must be revised, mark the
+revision and treat everything downstream as exploratory.
