@@ -1,4 +1,4 @@
-# rigorous-research
+# ai-research-skill: rigorous-research
 
 A Claude skill for conducting **AI/ML research as a science**.
 
